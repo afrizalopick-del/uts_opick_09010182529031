@@ -8,10 +8,24 @@ use Illuminate\Http\Request;
 
 class BookController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $books = Book::with('category')->latest()->get();
-        return view('books.index', compact('books'));
+        $books = Book::with('category')
+            ->when($request->search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('author', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->category_id, function ($query, $categoryId) {
+                $query->where('category_id', $categoryId);
+            })
+            ->latest()
+            ->get();
+
+        $categories = Category::all();
+
+        return view('books.index', compact('books', 'categories'));
     }
 
     public function create()
